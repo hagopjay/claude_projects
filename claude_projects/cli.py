@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import argparse
 import sqlite3
+import subprocess
 import sys
 from pathlib import Path
 
 from . import __version__
 from .db import STATUSES, ProjectsDB
+from .export import write_site
 from .git_sync import is_git_repo, sync_project
 
 
@@ -85,6 +87,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     sp = sub.add_parser("stop", help="stop the open work session")
     sp.add_argument("--notes")
+
+    sv = sub.add_parser("serve", help="live dashboard on localhost")
+    sv.add_argument("--port", type=int, default=0, help="default: any free port")
+    sv.add_argument("--no-open", action="store_true", help="don't open a browser")
+
+    ex = sub.add_parser("export", help="write the static dashboard (index.html + data.json)")
+    ex.add_argument("--out", type=Path, default=Path("docs"))
+
+    pb = sub.add_parser("publish", help="export into a git repo's docs/, commit and push")
+    pb.add_argument("--repo", type=Path, default=Path("."), help="checkout of the dashboard repo")
     return p
 
 
@@ -189,6 +201,29 @@ def main(argv: list[str] | None = None) -> None:
         except RuntimeError as e:
             sys.exit(f"error: {e}")
         print(f"session {s['id']} stopped ({s['started_at']} -> {s['ended_at']})")
+
+    elif args.cmd == "serve":
+        from .dashboard import serve  # imports webbrowser; keep it off the fast path
+
+        serve(db, port=args.port, open_browser=not args.no_open)
+
+    elif args.cmd == "export":
+        files = write_site(db, args.out)
+        print(f"wrote {len(files)} files to {args.out}/")
+
+    elif args.cmd == "publish":
+        repo = args.repo.expanduser().resolve()
+        if not is_git_repo(repo):
+            sys.exit(f"error: {repo} is not a git repo")
+        write_site(db, repo / "docs")
+        git = ["git", "-C", str(repo)]
+        subprocess.run([*git, "add", "docs"], check=True)
+        if subprocess.run([*git, "diff", "--cached", "--quiet"]).returncode == 0:
+            print("dashboard unchanged; nothing to publish")
+            return
+        subprocess.run([*git, "commit", "-q", "-m", "dashboard: refresh snapshot"], check=True)
+        subprocess.run([*git, "push"], check=True)
+        print("published: pushed docs/ — the Dashboard workflow will deploy it")
 
 
 if __name__ == "__main__":

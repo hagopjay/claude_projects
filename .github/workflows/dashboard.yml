@@ -1,0 +1,49 @@
+# Publishes docs/ (written by `claude-projects export` / `publish`) to GitHub Pages
+# and, for private repos without Pages, also attaches it as a downloadable artifact.
+name: Dashboard
+
+on:
+  push:
+    branches: [main]
+    paths: ["docs/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sanity-check the snapshot
+        run: python3 -c "import json; d=json.load(open('docs/data.json')); print(len(d['projects']), 'projects,', len(d['daily']), 'project-days')"
+
+      - name: Attach dashboard as artifact (works on any plan)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard
+          path: docs
+
+      - uses: actions/configure-pages@v5
+        id: pages
+        continue-on-error: true
+
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.pages.outcome == 'success'
+        with:
+          path: docs
+
+      - uses: actions/deploy-pages@v4
+        id: deployment
+        if: steps.pages.outcome == 'success'

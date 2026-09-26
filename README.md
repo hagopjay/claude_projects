@@ -51,6 +51,40 @@ claude-projects stop --notes "done"
 `add` syncs from git immediately. `sync` is idempotent — it rewrites each
 project-day from `git log --numstat`, so re-running never double-counts.
 
+## Dashboard
+
+```bash
+claude-projects serve            # live, on a free localhost port; opens your browser
+claude-projects serve --port 8765 --no-open
+```
+
+`serve` rebuilds `data.json` from the DB on every request, so it is always
+current — leave it running in a tab. Hero commit count with a vs-previous-period
+delta, stat tiles, commits per week, commits by theme, and a project table, with
+a 30d / 90d / 1y / all range switch. Light and dark follow your OS.
+
+### Publish it through GitHub Actions
+
+The same page works as a static site: `index.html` + a `data.json` snapshot.
+
+```bash
+cd ~/src/claude_projects          # a checkout of this repo (or any repo with the workflow)
+claude-projects publish           # export -> docs/, commit "dashboard: refresh snapshot", push
+```
+
+`.github/workflows/dashboard.yml` runs on every push that touches `docs/` and:
+
+1. attaches `docs/` as a downloadable **artifact** (works on every plan, private repos included), and
+2. deploys it to **GitHub Pages** when Pages is enabled for the repo
+   (Settings → Pages → Source: *GitHub Actions*). Pages on a **private** repo
+   needs GitHub Pro/Team; on Free, either make the repo public or use the artifact.
+
+Only the snapshot is published — never the database. Want it refreshed
+automatically? Put `claude-projects publish --repo ~/src/claude_projects` in the
+post-commit hook below, or on a cron.
+
+To just write the files without git: `claude-projects export --out some/dir`.
+
 ### Keep it current automatically
 
 Add to any tracked repo's `.git/hooks/post-commit` (make it executable):
@@ -75,7 +109,7 @@ Back it up like any file; `sqlite3 ~/.claude-projects/projects.db .dump` is enou
 
 ## Roadmap
 
-- `serve`: localhost dashboard reading the same DB (themes over time, streaks, per-project timelines)
+- streaks and per-project timelines on the dashboard
 - `report`: weekly/monthly markdown summary
 - theme suggestions from README / CLAUDE.md keywords on `add`
 - non-git activity (notes, papers read) as first-class entries
