@@ -12,6 +12,8 @@ from . import __version__
 from .db import STATUSES, ProjectsDB
 from .export import write_site
 from .git_sync import is_git_repo, sync_project
+from .report import PERIOD_DAYS, build_report
+from .theme_suggest import suggest_themes
 
 
 def _themes(arg: str | None) -> list[str]:
@@ -77,6 +79,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("themes", help="per-theme breakdown of your work")
 
+    rp = sub.add_parser("report", help="weekly/monthly markdown activity summary")
+    rp.add_argument("--period", choices=sorted(PERIOD_DAYS), default="week")
+    rp.add_argument("--project")
+    rp.add_argument("--theme")
+    rp.add_argument("--out", type=Path, help="write to this file instead of stdout")
+
     sy = sub.add_parser("sync", help="rebuild metrics from git history")
     sy.add_argument("name", nargs="?", help="one project (default: all)")
     sy.add_argument("--author", help="only count commits by this author")
@@ -110,10 +118,18 @@ def main(argv: list[str] | None = None) -> None:
     elif args.cmd == "add":
         path = Path(args.path).expanduser().resolve()
         name = args.name or path.name
+        themes = _themes(args.themes)
+        guessed = False
+        if not themes:
+            known = {t for p in db.list_projects() for t in p["themes"]}
+            themes = suggest_themes(path, known)
+            guessed = bool(themes)
         try:
-            proj = db.add_project(name, path, args.url, _themes(args.themes), args.notes)
+            proj = db.add_project(name, path, args.url, themes, args.notes)
         except sqlite3.IntegrityError:
             sys.exit(f"error: a project with that name or path already exists")
+        if guessed:
+            print(f"guessed themes from README/CLAUDE.md: {','.join(themes)} (override with --themes)")
         days = 0 if args.no_sync else sync_project(db, proj)
         print(f"added {name}  themes={','.join(proj['themes']) or '-'}  synced {days} day(s)")
 
@@ -139,6 +155,8 @@ def main(argv: list[str] | None = None) -> None:
             f" over {s['days_active']} day(s)"
         )
         print(f"{'sessions':<12}{db.session_minutes(p['name'])} min tracked")
+        streak = db.streaks(project_name=p["name"])
+        print(f"{'streak':<12}{streak['current']} day(s) (longest {streak['longest']})")
 
     elif args.cmd == "update":
         fields = {
@@ -174,10 +192,24 @@ def main(argv: list[str] | None = None) -> None:
         s = db.get_stats(project_name=args.project, theme=args.theme)
         for k, v in s.items():
             print(f"{k:<14}{v}")
+        if not args.theme:  # streaks() has no theme scope
+            streak = db.streaks(project_name=args.project)
+            print(f"{'streak_now':<14}{streak['current']}")
+            print(f"{'streak_best':<14}{streak['longest']}")
 
     elif args.cmd == "themes":
         rows = [[t, a["projects"], a["commits"], a["lines_added"]] for t, a in db.theme_breakdown().items()]
         print(_table(rows, ["theme", "projects", "commits", "lines_added"]) if rows else "no themes yet")
+
+    elif args.cmd == "report":
+        if args.project:
+            _require(db, args.project)
+        text = build_report(db, period=args.period, project=args.project, theme=args.theme)
+        if args.out:
+            args.out.write_text(text)
+            print(f"wrote {args.out}")
+        else:
+            print(text, end="")
 
     elif args.cmd == "sync":
         targets = [_require(db, args.name)] if args.name else db.list_projects()

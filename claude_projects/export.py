@@ -23,20 +23,12 @@ def snapshot(db: ProjectsDB) -> dict:
                 "session_minutes": db.session_minutes(p["name"]),
             }
         )
-    with db._conn() as c:
-        daily = [
-            dict(r)
-            for r in c.execute(
-                "SELECT p.name AS project, m.day, m.commits, m.lines_added, m.lines_removed,"
-                " m.files_changed FROM metrics m JOIN projects p ON p.id = m.project_id"
-                " ORDER BY m.day"
-            )
-        ]
     return {
         "generated_at": datetime.now().replace(microsecond=0).isoformat(),
         "projects": projects,
-        "daily": daily,
+        "daily": db.daily_rows(),
         "themes": db.theme_breakdown(),
+        "streaks": db.streaks(),
     }
 
 

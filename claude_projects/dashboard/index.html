@@ -169,11 +169,12 @@
       <div class="tile"><div class="label">Active projects</div><div class="value">${activeProjects}</div><div class="delta">of ${data.projects.length} tracked</div></div>
       <div class="tile"><div class="label">Active days</div><div class="value">${activeDays}</div></div>
       <div class="tile"><div class="label">Lines added</div><div class="value">${fmt(sum(rows, "lines_added"))}</div><div class="delta">−${fmt(sum(rows, "lines_removed"))} removed</div></div>
-      <div class="tile"><div class="label">Session time</div><div class="value">${minutes >= 60 ? (minutes/60).toFixed(1) + "h" : minutes + "m"}</div><div class="delta">manually tracked, all time</div></div>`;
+      <div class="tile"><div class="label">Session time</div><div class="value">${minutes >= 60 ? (minutes/60).toFixed(1) + "h" : minutes + "m"}</div><div class="delta">manually tracked, all time</div></div>
+      <div class="tile"><div class="label">Streak</div><div class="value">${data.streaks.current}</div><div class="delta">day${data.streaks.current === 1 ? "" : "s"} in a row · best ${data.streaks.longest}</div></div>`;
 
     renderWeekly(rows, since, now);
     renderThemes(rows);
-    renderTable(rows);
+    renderTable(rows, now);
   }
 
   function renderWeekly(rows, since, now) {
@@ -249,7 +250,25 @@
     });
   }
 
-  function renderTable(rows) {
+  const SPARK_DAYS = 30;
+
+  function sparkline(name, now) {
+    const since = new Date(now - (SPARK_DAYS - 1) * dayMs);
+    const byDay = {};
+    for (const r of data.daily) if (r.project === name && toDate(r.day) >= since) byDay[r.day] = (byDay[r.day] || 0) + r.commits;
+    const bars = [];
+    for (let d = since; d <= now; d = new Date(+d + dayMs)) bars.push(byDay[iso(d)] || 0);
+    const w = 3, gap = 1, H = 20, max = Math.max(1, ...bars);
+    const W = bars.length * (w + gap);
+    let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(name)} activity, last ${SPARK_DAYS} days">`;
+    bars.forEach((v, i) => {
+      const h = v ? Math.max(1, Math.round((v / max) * (H - 2))) : 0;
+      if (h) svg += `<rect class="bar" x="${i * (w + gap)}" y="${H - h}" width="${w}" height="${h}" rx="1"/>`;
+    });
+    return svg + "</svg>";
+  }
+
+  function renderTable(rows, now) {
     const agg = {};
     for (const r of rows) {
       const a = agg[r.project] ||= { commits: 0, add: 0, del: 0, last: "" };
@@ -258,7 +277,7 @@
     const projs = [...data.projects].sort((a, b) => (agg[b.name]?.commits || 0) - (agg[a.name]?.commits || 0) || a.name.localeCompare(b.name));
     if (!projs.length) { $("#table").innerHTML = '<div class="empty">No projects yet — <code>claude-projects add &lt;path&gt;</code></div>'; return; }
     $("#table").innerHTML = `<table><thead><tr><th>Project</th><th>Status</th><th>Themes</th>
-      <th class="num">Commits</th><th class="num">Lines</th><th>Last active</th><th class="num">Sessions</th></tr></thead><tbody>` +
+      <th class="num">Commits</th><th class="num">Lines</th><th>Last active</th><th class="num">Sessions</th><th>Last ${SPARK_DAYS}d</th></tr></thead><tbody>` +
       projs.map((p) => { const a = agg[p.name] || { commits: 0, add: 0, del: 0, last: "" }; return `<tr>
         <td>${p.url ? `<a href="${esc(p.url)}">${esc(p.name)}</a>` : esc(p.name)}${p.notes ? `<div class="meta">${esc(p.notes)}</div>` : ""}</td>
         <td><span class="status ${esc(p.status)}">${esc(p.status)}</span></td>
@@ -266,7 +285,8 @@
         <td class="num">${a.commits.toLocaleString()}</td>
         <td class="num">+${fmt(a.add)} / −${fmt(a.del)}</td>
         <td>${a.last || "—"}</td>
-        <td class="num">${p.session_minutes ? (p.session_minutes / 60).toFixed(1) + "h" : "—"}</td></tr>`; }).join("") + "</tbody></table>";
+        <td class="num">${p.session_minutes ? (p.session_minutes / 60).toFixed(1) + "h" : "—"}</td>
+        <td>${sparkline(p.name, now)}</td></tr>`; }).join("") + "</tbody></table>";
   }
 
   function niceStep(max) {

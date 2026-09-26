@@ -43,6 +43,7 @@ claude-projects remove thing
 claude-projects sync [thing] [--author you@example.com]   # rebuild metrics from git log
 claude-projects stats [--project thing | --theme AI]
 claude-projects themes                                    # where your effort actually goes
+claude-projects report [--period week|month] [--project thing | --theme AI] [--out FILE.md]
 
 claude-projects start thing --notes "reading Leiden paper"
 claude-projects stop --notes "done"
@@ -50,6 +51,16 @@ claude-projects stop --notes "done"
 
 `add` syncs from git immediately. `sync` is idempotent — it rewrites each
 project-day from `git log --numstat`, so re-running never double-counts.
+
+If you don't pass `--themes` to `add`, it scans the project's `README.md` /
+`CLAUDE.md` / `AGENTS.md` for words matching themes you've already used
+elsewhere and tags with those — purely local keyword matching, no LLM call,
+nothing sent anywhere. Pass `--themes` explicitly to skip the guess.
+
+`report` prints a markdown activity summary for the trailing 7 (`week`) or 30
+(`month`) days — totals, a per-project table, and your current/longest streak
+— to stdout or `--out somewhere.md`. Handy piped into a standup note or a
+weekly journal entry.
 
 ## Dashboard
 
@@ -60,7 +71,8 @@ claude-projects serve --port 8765 --no-open
 
 `serve` rebuilds `data.json` from the DB on every request, so it is always
 current — leave it running in a tab. Hero commit count with a vs-previous-period
-delta, stat tiles, commits per week, commits by theme, and a project table, with
+delta, stat tiles (including your current commit streak), commits per week,
+commits by theme, and a project table with a 30-day sparkline per project, with
 a 30d / 90d / 1y / all range switch. Light and dark follow your OS.
 
 ### Publish it through GitHub Actions
@@ -109,9 +121,10 @@ Back it up like any file; `sqlite3 ~/.claude-projects/projects.db .dump` is enou
 
 ## Roadmap
 
-- streaks and per-project timelines on the dashboard
-- `report`: weekly/monthly markdown summary
-- theme suggestions from README / CLAUDE.md keywords on `add`
+- ~~streaks and per-project timelines on the dashboard~~ — done: `streak` tile
+  + `stats`/`show`, 30-day per-project sparkline in the table
+- ~~`report`: weekly/monthly markdown summary~~ — done: `claude-projects report`
+- ~~theme suggestions from README / CLAUDE.md keywords on `add`~~ — done
 - non-git activity (notes, papers read) as first-class entries
 
 ## Development

@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import date, timedelta
 
 import pytest
 
@@ -72,6 +73,37 @@ def test_remove_cascades(db, tmp_path):
     assert db.get_stats()["commits"] == 0
     with pytest.raises(KeyError):
         db.remove_project("a")
+
+
+def test_daily_rows_filters(db, tmp_path):
+    a = db.add_project("a", tmp_path / "a")
+    b = db.add_project("b", tmp_path / "b")
+    db.set_metrics(a["id"], "2026-09-01", commits=1)
+    db.set_metrics(a["id"], "2026-09-05", commits=2)
+    db.set_metrics(b["id"], "2026-09-03", commits=3)
+    assert [r["day"] for r in db.daily_rows()] == ["2026-09-01", "2026-09-03", "2026-09-05"]
+    assert [r["day"] for r in db.daily_rows(project_name="a")] == ["2026-09-01", "2026-09-05"]
+    assert [r["day"] for r in db.daily_rows(since="2026-09-03")] == ["2026-09-03", "2026-09-05"]
+
+
+def test_streaks_consecutive_and_broken(db, tmp_path):
+    p = db.add_project("a", tmp_path)
+    assert db.streaks() == {"current": 0, "longest": 0}
+    today = date.today()
+    # a 3-day run 5-7 days ago (broken since), then a fresh 2-day run: yesterday + today
+    for offset in (7, 6, 5, 1, 0):
+        db.set_metrics(p["id"], today - timedelta(days=offset), commits=1)
+    s = db.streaks()
+    assert s["longest"] == 3
+    assert s["current"] == 2
+
+
+def test_streaks_zero_after_gap(db, tmp_path):
+    p = db.add_project("a", tmp_path)
+    db.set_metrics(p["id"], date.today() - timedelta(days=10), commits=1)
+    s = db.streaks(project_name="a")
+    assert s["current"] == 0
+    assert s["longest"] == 1
 
 
 def test_sessions(db, tmp_path):

@@ -201,6 +201,54 @@ class ProjectsDB:
                 stats = dict(row)
         return {k: int(v) for k, v in stats.items()}
 
+    def daily_rows(
+        self, project_name: str | None = None, since: date | str | None = None
+    ) -> list[dict[str, Any]]:
+        """Per-project-day metric rows, oldest first. Backs the dashboard snapshot and reports."""
+        sql = (
+            "SELECT p.name AS project, m.day, m.commits, m.lines_added, m.lines_removed,"
+            " m.files_changed FROM metrics m JOIN projects p ON p.id = m.project_id"
+        )
+        clauses, params = [], []
+        if project_name:
+            clauses.append("p.name = ?")
+            params.append(project_name)
+        if since:
+            clauses.append("m.day >= ?")
+            params.append(str(since))
+        if clauses:
+            sql += " WHERE " + " AND ".join(clauses)
+        sql += " ORDER BY m.day"
+        with self._conn() as c:
+            return [dict(r) for r in c.execute(sql, params)]
+
+    def streaks(self, project_name: str | None = None) -> dict[str, int]:
+        """Current and longest run of consecutive active days (any commit that day).
+
+        "Active day" means at least one project (or the named one) had a commit.
+        `current` is 0 once more than a day has passed since the last active day,
+        so a habit break shows up immediately rather than lingering until synced.
+        """
+        sql = "SELECT DISTINCT m.day FROM metrics m WHERE m.commits > 0"
+        params: list[Any] = []
+        if project_name:
+            sql = (
+                "SELECT DISTINCT m.day FROM metrics m JOIN projects p ON p.id = m.project_id"
+                " WHERE p.name = ? AND m.commits > 0"
+            )
+            params.append(project_name)
+        sql += " ORDER BY m.day"
+        with self._conn() as c:
+            days = [date.fromisoformat(r["day"]) for r in c.execute(sql, params)]
+        if not days:
+            return {"current": 0, "longest": 0}
+        longest = run = 1
+        for prev, cur in zip(days, days[1:]):
+            run = run + 1 if (cur - prev).days == 1 else 1
+            longest = max(longest, run)
+        current = run if (date.today() - days[-1]).days <= 1 else 0
+        return {"current": current, "longest": longest}
+
     def theme_breakdown(self) -> dict[str, dict[str, int]]:
         """Per-theme totals: how much of your work lands in each interest."""
         out: dict[str, dict[str, int]] = {}
