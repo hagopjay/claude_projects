@@ -1,0 +1,189 @@
+{
+ "generated_at": "2026-09-26T08:22:31",
+ "projects": [
+  {
+   "name": "graphify",
+   "status": "active",
+   "themes": [
+    "AI",
+    "Documentation",
+    "Learning"
+   ],
+   "url": "https://github.com/hagopjay/graphify",
+   "path": "/home/user/graphify",
+   "notes": null,
+   "created_at": "2026-09-26T08:19:56",
+   "updated_at": "2026-09-26T08:19:57",
+   "commits": 54,
+   "lines_added": 260987,
+   "lines_removed": 18671,
+   "files_changed": 900,
+   "days_active": 8,
+   "projects": 1,
+   "session_minutes": 0
+  },
+  {
+   "name": "claude_projects",
+   "status": "active",
+   "themes": [
+    "Tools",
+    "Python",
+    "Architecture"
+   ],
+   "url": null,
+   "path": "/home/user/claude_projects",
+   "notes": null,
+   "created_at": "2026-09-26T08:19:57",
+   "updated_at": "2026-09-26T08:19:57",
+   "commits": 1,
+   "lines_added": 832,
+   "lines_removed": 0,
+   "files_changed": 11,
+   "days_active": 1,
+   "projects": 1,
+   "session_minutes": 0
+  },
+  {
+   "name": "math-ml-study",
+   "status": "active",
+   "themes": [
+    "ML",
+    "Maths",
+    "Theory"
+   ],
+   "url": null,
+   "path": "/tmp/x-study",
+   "notes": null,
+   "created_at": "2026-09-26T08:19:57",
+   "updated_at": "2026-09-26T08:19:57",
+   "commits": 0,
+   "lines_added": 0,
+   "lines_removed": 0,
+   "files_changed": 0,
+   "days_active": 0,
+   "projects": 0,
+   "session_minutes": 0
+  }
+ ],
+ "daily": [
+  {
+   "project": "graphify",
+   "day": "2026-07-06",
+   "commits": 3,
+   "lines_added": 171,
+   "lines_removed": 54,
+   "files_changed": 6
+  },
+  {
+   "project": "graphify",
+   "day": "2026-07-07",
+   "commits": 1,
+   "lines_added": 166,
+   "lines_removed": 0,
+   "files_changed": 2
+  },
+  {
+   "project": "graphify",
+   "day": "2026-07-08",
+   "commits": 12,
+   "lines_added": 233303,
+   "lines_removed": 90,
+   "files_changed": 749
+  },
+  {
+   "project": "graphify",
+   "day": "2026-07-09",
+   "commits": 16,
+   "lines_added": 19834,
+   "lines_removed": 18409,
+   "files_changed": 71
+  },
+  {
+   "project": "graphify",
+   "day": "2026-07-10",
+   "commits": 10,
+   "lines_added": 1110,
+   "lines_removed": 84,
+   "files_changed": 29
+  },
+  {
+   "project": "graphify",
+   "day": "2026-07-11",
+   "commits": 7,
+   "lines_added": 355,
+   "lines_removed": 33,
+   "files_changed": 26
+  },
+  {
+   "project": "graphify",
+   "day": "2026-07-12",
+   "commits": 1,
+   "lines_added": 85,
+   "lines_removed": 0,
+   "files_changed": 3
+  },
+  {
+   "project": "graphify",
+   "day": "2026-09-26",
+   "commits": 4,
+   "lines_added": 5963,
+   "lines_removed": 1,
+   "files_changed": 14
+  },
+  {
+   "project": "claude_projects",
+   "day": "2026-09-26",
+   "commits": 1,
+   "lines_added": 832,
+   "lines_removed": 0,
+   "files_changed": 11
+  }
+ ],
+ "themes": {
+  "AI": {
+   "projects": 1,
+   "commits": 54,
+   "lines_added": 260987
+  },
+  "Documentation": {
+   "projects": 1,
+   "commits": 54,
+   "lines_added": 260987
+  },
+  "Learning": {
+   "projects": 1,
+   "commits": 54,
+   "lines_added": 260987
+  },
+  "Tools": {
+   "projects": 1,
+   "commits": 1,
+   "lines_added": 832
+  },
+  "Python": {
+   "projects": 1,
+   "commits": 1,
+   "lines_added": 832
+  },
+  "Architecture": {
+   "projects": 1,
+   "commits": 1,
+   "lines_added": 832
+  },
+  "ML": {
+   "projects": 1,
+   "commits": 0,
+   "lines_added": 0
+  },
+  "Maths": {
+   "projects": 1,
+   "commits": 0,
+   "lines_added": 0
+  },
+  "Theory": {
+   "projects": 1,
+   "commits": 0,
+   "lines_added": 0
+  }
+ }
+}

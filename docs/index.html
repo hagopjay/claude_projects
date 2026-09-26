@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projects Dashboard</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7; --surface: #fcfcfb;
+    --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
+    --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,.10);
+    --s1: #2a78d6; --s1-wash: rgba(42,120,214,.10); --good: #006300;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19;
+      --ink: #ffffff; --ink2: #c3c2b7; --muted: #898781;
+      --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,.10);
+      --s1: #3987e5; --s1-wash: rgba(57,135,229,.12); --good: #0ca30c;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19;
+    --ink: #ffffff; --ink2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,.10);
+    --s1: #3987e5; --s1-wash: rgba(57,135,229,.12); --good: #0ca30c;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink);
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px 20px; margin-bottom: 20px; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .range { margin-left: auto; display: flex; flex-wrap: wrap; gap: 4px; }
+  @media (max-width: 600px) { .range { margin-left: 0; width: 100%; } }
+  .range button { font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 6px;
+                  border: 1px solid var(--border); background: var(--surface); color: var(--ink2); cursor: pointer; }
+  .range button[aria-pressed="true"] { color: var(--ink); font-weight: 600; border-color: var(--axis); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .tile .label { color: var(--ink2); font-size: 13px; }
+  .tile .value { font-size: 28px; font-weight: 600; margin-top: 2px; }
+  .tile.hero .value { font-size: 48px; line-height: 1.1; }
+  .tile .delta { font-size: 13px; color: var(--ink2); margin-top: 2px; }
+  .tile .delta.up { color: var(--good); }
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  @media (min-width: 820px) { .grid { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); } }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; min-width: 0; }
+  #table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .card h2 { font-size: 15px; font-weight: 600; margin: 0 0 2px; }
+  .card .sub { color: var(--muted); font-size: 13px; margin-bottom: 10px; }
+  svg { width: 100%; height: auto; display: block; overflow: visible; }
+  svg text { font-family: inherit; font-size: 12px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+  svg .label { fill: var(--ink2); }
+  svg .grid { stroke: var(--grid); stroke-width: 1; }
+  svg .axis { stroke: var(--axis); stroke-width: 1; }
+  svg .bar { fill: var(--s1); }
+  svg .hit { fill: transparent; }
+  svg .hit:hover + .bar, svg .band:hover .bar { opacity: .8; }
+  .tip { position: fixed; pointer-events: none; z-index: 10; background: var(--surface); color: var(--ink);
+         border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 13px;
+         box-shadow: 0 4px 16px rgba(0,0,0,.12); display: none; max-width: 260px; }
+  .tip b { font-weight: 600; }
+  .tip .k { color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+  th { color: var(--ink2); font-weight: 600; font-size: 13px; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .chip { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px;
+          border: 1px solid var(--border); color: var(--ink2); margin: 1px 4px 1px 0; }
+  .status { display: inline-flex; align-items: center; gap: 6px; color: var(--ink2); font-size: 13px; }
+  .status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--axis); }
+  .status.active::before { background: var(--s1); }
+  a { color: inherit; }
+  .empty { color: var(--muted); padding: 24px 0; text-align: center; }
+  .full { grid-column: 1 / -1; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Projects</h1>
+    <span class="meta" id="meta"></span>
+    <div class="range" id="range" role="group" aria-label="Date range">
+      <button data-days="30">30d</button>
+      <button data-days="90" aria-pressed="true">90d</button>
+      <button data-days="365">1y</button>
+      <button data-days="0">All</button>
+    </div>
+  </header>
+  <section class="tiles" id="tiles"></section>
+  <section class="grid">
+    <div class="card">
+      <h2>Commits per week</h2>
+      <div class="sub" id="weekly-sub"></div>
+      <div id="weekly"></div>
+    </div>
+    <div class="card">
+      <h2>Commits by theme</h2>
+      <div class="sub">Where the work lands in the selected range</div>
+      <div id="themes"></div>
+    </div>
+    <div class="card full">
+      <h2>All projects</h2>
+      <div class="sub">Sorted by activity in the selected range</div>
+      <div id="table"></div>
+    </div>
+  </section>
+</main>
+<div class="tip" id="tip"></div>
+<script>
+(async function () {
+  const $ = (s) => document.querySelector(s);
+  const fmt = (n) => n >= 1e6 ? (n/1e6).toFixed(1)+"M" : n >= 1e4 ? (n/1e3).toFixed(1)+"K" : n.toLocaleString();
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const tip = $("#tip");
+  const showTip = (e, html) => { tip.innerHTML = html; tip.style.display = "block"; moveTip(e); };
+  const moveTip = (e) => { tip.style.left = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8) + "px";
+                           tip.style.top = Math.min(e.clientY + 14, innerHeight - tip.offsetHeight - 8) + "px"; };
+  const hideTip = () => { tip.style.display = "none"; };
+
+  let data;
+  try {
+    const r = await fetch("data.json?" + Date.now());
+    data = await r.json();
+  } catch (e) {
+    $("#tiles").innerHTML = '<div class="empty">Could not load data.json</div>';
+    return;
+  }
+  $("#meta").textContent = "updated " + data.generated_at.replace("T", " ");
+
+  let days = 90;
+  $("#range").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    days = +b.dataset.days;
+    for (const x of $("#range").children) x.setAttribute("aria-pressed", x === b);
+    render();
+  });
+
+  const dayMs = 864e5;
+  const toDate = (s) => new Date(s + "T00:00:00");
+  const iso = (d) => d.toISOString().slice(0, 10);
+  const weekStart = (d) => { const x = new Date(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
+
+  function render() {
+    const now = new Date(); now.setHours(0,0,0,0);
+    const since = days ? new Date(now - days * dayMs) : null;
+    const prevSince = days ? new Date(now - 2 * days * dayMs) : null;
+    const inRange = (r) => !since || toDate(r.day) >= since;
+    const inPrev = (r) => days && toDate(r.day) >= prevSince && toDate(r.day) < since;
+    const rows = data.daily.filter(inRange);
+    const prev = data.daily.filter(inPrev);
+
+    // ---- tiles
+    const sum = (xs, k) => xs.reduce((a, r) => a + r[k], 0);
+    const commits = sum(rows, "commits"), prevCommits = sum(prev, "commits");
+    const activeDays = new Set(rows.map((r) => r.day)).size;
+    const activeProjects = new Set(rows.filter((r) => r.commits).map((r) => r.project)).size;
+    const minutes = data.projects.reduce((a, p) => a + p.session_minutes, 0);
+    const delta = days ? (prevCommits ? Math.round((commits - prevCommits) / prevCommits * 100) : null) : null;
+    const rangeLabel = days ? `last ${days} days` : "all time";
+    $("#tiles").innerHTML = `
+      <div class="tile hero"><div class="label">Commits, ${rangeLabel}</div><div class="value">${fmt(commits)}</div>
+        ${delta === null ? "" : `<div class="delta ${delta >= 0 ? "up" : ""}">${delta >= 0 ? "+" : ""}${delta}% vs previous ${days} days</div>`}</div>
+      <div class="tile"><div class="label">Active projects</div><div class="value">${activeProjects}</div><div class="delta">of ${data.projects.length} tracked</div></div>
+      <div class="tile"><div class="label">Active days</div><div class="value">${activeDays}</div></div>
+      <div class="tile"><div class="label">Lines added</div><div class="value">${fmt(sum(rows, "lines_added"))}</div><div class="delta">−${fmt(sum(rows, "lines_removed"))} removed</div></div>
+      <div class="tile"><div class="label">Session time</div><div class="value">${minutes >= 60 ? (minutes/60).toFixed(1) + "h" : minutes + "m"}</div><div class="delta">manually tracked, all time</div></div>`;
+
+    renderWeekly(rows, since, now);
+    renderThemes(rows);
+    renderTable(rows);
+  }
+
+  function renderWeekly(rows, since, now) {
+    const el = $("#weekly");
+    if (!rows.length) { el.innerHTML = '<div class="empty">No commits in range</div>'; $("#weekly-sub").textContent = ""; return; }
+    const first = since || toDate(rows[0].day);
+    const weeks = [];
+    for (let d = weekStart(first); d <= now; d = new Date(+d + 7 * dayMs)) weeks.push({ start: d, key: iso(d), commits: 0, byProject: {} });
+    const idx = Object.fromEntries(weeks.map((w, i) => [w.key, i]));
+    for (const r of rows) {
+      const w = weeks[idx[iso(weekStart(toDate(r.day)))]]; if (!w) continue;
+      w.commits += r.commits; w.byProject[r.project] = (w.byProject[r.project] || 0) + r.commits;
+    }
+    $("#weekly-sub").textContent = `${weeks.length} weeks · single series`;
+    const W = 640, H = 220, padL = 36, padB = 24, padT = 8;
+    const max = Math.max(1, ...weeks.map((w) => w.commits));
+    const step = niceStep(max);
+    const yMax = Math.ceil(max / step) * step;
+    const band = (W - padL) / weeks.length;
+    const bw = Math.min(24, band * 0.6);
+    const y = (v) => padT + (H - padB - padT) * (1 - v / yMax);
+    let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Commits per week">`;
+    for (let v = 0; v <= yMax; v += step)
+      svg += `<line class="grid" x1="${padL}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text x="${padL - 6}" y="${y(v) + 4}" text-anchor="end">${v.toLocaleString()}</text>`;
+    svg += `<line class="axis" x1="${padL}" x2="${W}" y1="${y(0)}" y2="${y(0)}"/>`;
+    const peak = weeks.reduce((a, w) => (w.commits > a.commits ? w : a), weeks[0]);
+    weeks.forEach((w, i) => {
+      const x = padL + i * band + (band - bw) / 2, top = y(w.commits), h = y(0) - top;
+      const r = Math.min(4, h);
+      const path = h > 0 ? `M${x},${y(0)} v${-(h - r)} a${r},${r} 0 0 1 ${r},${-r} h${bw - 2 * r} a${r},${r} 0 0 1 ${r},${r} v${h - r} z` : "";
+      const label = w === peak && w.commits ? `<text class="label" x="${x + bw / 2}" y="${top - 6}" text-anchor="middle">${w.commits}</text>` : "";
+      const tick = (i % Math.ceil(weeks.length / 8) === 0) ? `<text x="${x + bw / 2}" y="${H - 6}" text-anchor="middle">${w.start.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</text>` : "";
+      svg += `<g class="band" data-i="${i}"><rect class="hit" x="${padL + i * band}" y="${padT}" width="${band}" height="${H - padB - padT}"/><path class="bar" d="${path}"/>${label}${tick}</g>`;
+    });
+    el.innerHTML = svg + "</svg>";
+    el.querySelectorAll(".band").forEach((g) => {
+      const w = weeks[+g.dataset.i];
+      const top = Object.entries(w.byProject).sort((a, b) => b[1] - a[1]).slice(0, 3)
+        .map(([p, c]) => `<div><span class="k">${esc(p)}</span> ${c}</div>`).join("");
+      const html = `<b>Week of ${w.start.toLocaleDateString()}</b><div>${w.commits} commit${w.commits === 1 ? "" : "s"}</div>${top}`;
+      g.addEventListener("mouseenter", (e) => showTip(e, html));
+      g.addEventListener("mousemove", moveTip);
+      g.addEventListener("mouseleave", hideTip);
+    });
+  }
+
+  function renderThemes(rows) {
+    const el = $("#themes");
+    const byProject = {};
+    for (const r of rows) byProject[r.project] = (byProject[r.project] || 0) + r.commits;
+    const totals = {};
+    for (const p of data.projects) for (const t of p.themes) totals[t] = (totals[t] || 0) + (byProject[p.name] || 0);
+    let items = Object.entries(totals).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+    if (!items.length) { el.innerHTML = '<div class="empty">No themed activity in range</div>'; return; }
+    if (items.length > 8) items = [...items.slice(0, 7), ["Other", items.slice(7).reduce((a, [, v]) => a + v, 0)]];
+    const W = 420, rowH = 30, bh = 20, labelW = 120, H = items.length * rowH;
+    const max = items[0][1];
+    let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Commits by theme">`;
+    items.forEach(([t, v], i) => {
+      const yy = i * rowH + (rowH - bh) / 2, w = Math.max(0, (W - labelW - 56) * v / max), r = Math.min(4, w);
+      const path = w > 0 ? `M${labelW},${yy} h${w - r} a${r},${r} 0 0 1 ${r},${r} v${bh - 2 * r} a${r},${r} 0 0 1 ${-r},${r} h${-(w - r)} z` : "";
+      svg += `<g class="band" data-t="${esc(t)}" data-v="${v}"><rect class="hit" x="0" y="${i * rowH}" width="${W}" height="${rowH}"/>
+        <text class="label" x="${labelW - 8}" y="${yy + bh / 2 + 4}" text-anchor="end">${esc(t)}</text>
+        <path class="bar" d="${path}"/><text class="label" x="${labelW + w + 6}" y="${yy + bh / 2 + 4}">${v.toLocaleString()}</text></g>`;
+    });
+    el.innerHTML = svg + "</svg>";
+    el.querySelectorAll(".band").forEach((g) => {
+      const projs = data.projects.filter((p) => p.themes.includes(g.dataset.t) && byProject[p.name]).sort((a, b) => byProject[b.name] - byProject[a.name]).slice(0, 4)
+        .map((p) => `<div><span class="k">${esc(p.name)}</span> ${byProject[p.name]}</div>`).join("");
+      g.addEventListener("mouseenter", (e) => showTip(e, `<b>${esc(g.dataset.t)}</b><div>${g.dataset.v} commits</div>${projs}`));
+      g.addEventListener("mousemove", moveTip);
+      g.addEventListener("mouseleave", hideTip);
+    });
+  }
+
+  function renderTable(rows) {
+    const agg = {};
+    for (const r of rows) {
+      const a = agg[r.project] ||= { commits: 0, add: 0, del: 0, last: "" };
+      a.commits += r.commits; a.add += r.lines_added; a.del += r.lines_removed; if (r.day > a.last) a.last = r.day;
+    }
+    const projs = [...data.projects].sort((a, b) => (agg[b.name]?.commits || 0) - (agg[a.name]?.commits || 0) || a.name.localeCompare(b.name));
+    if (!projs.length) { $("#table").innerHTML = '<div class="empty">No projects yet — <code>claude-projects add &lt;path&gt;</code></div>'; return; }
+    $("#table").innerHTML = `<table><thead><tr><th>Project</th><th>Status</th><th>Themes</th>
+      <th class="num">Commits</th><th class="num">Lines</th><th>Last active</th><th class="num">Sessions</th></tr></thead><tbody>` +
+      projs.map((p) => { const a = agg[p.name] || { commits: 0, add: 0, del: 0, last: "" }; return `<tr>
+        <td>${p.url ? `<a href="${esc(p.url)}">${esc(p.name)}</a>` : esc(p.name)}${p.notes ? `<div class="meta">${esc(p.notes)}</div>` : ""}</td>
+        <td><span class="status ${esc(p.status)}">${esc(p.status)}</span></td>
+        <td>${p.themes.map((t) => `<span class="chip">${esc(t)}</span>`).join("")}</td>
+        <td class="num">${a.commits.toLocaleString()}</td>
+        <td class="num">+${fmt(a.add)} / −${fmt(a.del)}</td>
+        <td>${a.last || "—"}</td>
+        <td class="num">${p.session_minutes ? (p.session_minutes / 60).toFixed(1) + "h" : "—"}</td></tr>`; }).join("") + "</tbody></table>";
+  }
+
+  function niceStep(max) {
+    const raw = max / 4, p = Math.pow(10, Math.floor(Math.log10(raw)));
+    for (const m of [1, 2, 5, 10]) if (m * p >= raw) return m * p;
+    return 10 * p;
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
